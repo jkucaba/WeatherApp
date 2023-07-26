@@ -2,6 +2,7 @@ package com.example.weatherapp
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.example.weatherapp.databinding.ActivityMainBinding
 import com.example.weatherapp.keys.ConstKey
 import com.example.weatherapp.models.WeatherResponse
 import com.example.weatherapp.network.WeatherService
@@ -27,10 +29,17 @@ import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import retrofit.*
 class MainActivity : AppCompatActivity() {
 
+    private var binding: ActivityMainBinding?=null
+
     private lateinit var mFusedLocationClient : FusedLocationProviderClient     //required for getting location
+
+    private var mProgressDialog: Dialog? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding?.root) // top element of xml file is root
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -134,10 +143,15 @@ class MainActivity : AppCompatActivity() {
                 latitude, longitude, Constants.METRIC_UNIT, ConstKey.APP_ID
             )
 
+            showCustomProgressDialog()
+
             listCall.enqueue(object : Callback<WeatherResponse>{
                 override fun onResponse(response: Response<WeatherResponse>, retrofit: Retrofit) {
                     if(response.isSuccess){
+                        hideProgressDialog()
+
                         val weatherList : WeatherResponse = response.body()
+                        setupUI(weatherList)
                         Log.i("Response Result", "$weatherList")
                     }else {
                         val rc = response.code()
@@ -155,6 +169,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 override fun onFailure(t: Throwable?) {
+
+                    hideProgressDialog()
+
                     Log.e("Error", t!!.message.toString())
                 }
             })
@@ -166,5 +183,40 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
     }
+    private fun showCustomProgressDialog() {
+        mProgressDialog = Dialog(this)
+        /*Set the screen content from a layout resource.
+        The resource will be inflated, adding all top-level views to the screen.*/
+        mProgressDialog!!.setContentView(R.layout.dialog_custom_progress)
+
+        //Start the dialog and display it on screen.
+        mProgressDialog!!.show()
+    }
+    private fun hideProgressDialog() {
+        if (mProgressDialog != null) {
+            mProgressDialog!!.dismiss()
+        }
+    }
+
+    private fun setupUI(weatherList : WeatherResponse){
+        for(i in weatherList.weather.indices){
+            Log.i("Weather Name", weatherList.weather.toString())
+
+            binding?.tvMain?.text = weatherList.weather[i].main
+            binding?.tvMainDescription?.text = weatherList.weather[i].description
+            binding?.tvTemp?.text = weatherList.main.temp.toString() + getUnit(application.resources.configuration.locales.toString())
+
+
+        }
+    }
+
+    private fun getUnit(value: String): String?{
+        var value = "°C"
+        if ("US" == value || "LR" == value || "MM" == value) {
+            value = "°F"
+        }
+        return value
+    }
+
 
 }
