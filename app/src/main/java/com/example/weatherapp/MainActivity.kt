@@ -4,8 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.ActivityNotFoundException
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
@@ -14,8 +16,11 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
 import com.example.weatherapp.databinding.ActivityMainBinding
 import com.example.weatherapp.keys.ConstKey
 import com.example.weatherapp.models.WeatherResponse
@@ -29,6 +34,7 @@ import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import retrofit.*
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.android.gms.location.LocationRequest
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,6 +43,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mFusedLocationClient : FusedLocationProviderClient     //required for getting location
 
     private var mProgressDialog: Dialog? = null
+
+    // A global variable for Current Latitude
+    private var mLatitude: Double = 0.0
+    // A global variable for Current Longitude
+    private var mLongitude: Double = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,24 +105,26 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun requestLocationData() {
 
-        val mLocationRequest = LocationRequest()
-        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        val mLocationRequest = LocationRequest.Builder(1000)
+        mLocationRequest.setPriority(Priority.PRIORITY_HIGH_ACCURACY)
 
         mFusedLocationClient.requestLocationUpdates(
-            mLocationRequest, mLocationCallback,
-            Looper.myLooper()
-        )
+            mLocationRequest.build(),
+            mLocationCallback,
+            Looper.myLooper())
+
     }
     private val mLocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
-            val mLastLocation: Location = locationResult.lastLocation
-            val latitude = mLastLocation.latitude
-            Log.e("Current Latitude", "$latitude")
+            val mLastLocation: Location? = locationResult.lastLocation
+            mLatitude = mLastLocation!!.latitude
+            mLongitude = mLastLocation.longitude
+            Log.d(TAG, "LAT: $mLatitude")
+            Log.d(TAG, "LNG: $mLongitude")
 
-            val longitude = mLastLocation.longitude
-            Log.e("Current Longitude", "$longitude")
+            getLocationWeatherDetails()
 
-            getLocationWeatherDetails(latitude, longitude)
+            mFusedLocationClient.removeLocationUpdates(this)
         }
     }
     private fun showRationalDialogForPermissions() {
@@ -131,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }.show()
     }
-    private fun getLocationWeatherDetails(latitude: Double, longitude: Double){
+    private fun getLocationWeatherDetails(){
         if(Constants.isNetworkAvailable(this)){
 
             val retrofit : Retrofit = Retrofit.Builder()
@@ -143,7 +156,7 @@ class MainActivity : AppCompatActivity() {
                 retrofit.create<WeatherService>(WeatherService::class.java)
 
             val listCall : Call<WeatherResponse> = service.getWeather(
-                latitude, longitude, Constants.METRIC_UNIT, ConstKey.APP_ID
+                mLatitude, mLongitude, Constants.METRIC_UNIT, ConstKey.APP_ID
             )
 
             showCustomProgressDialog()
@@ -252,6 +265,20 @@ class MainActivity : AppCompatActivity() {
         val sdf = SimpleDateFormat("HH:mm", Locale.UK)
         sdf.timeZone = TimeZone.getDefault()
         return sdf.format(date)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean { //creates the menu on the top right
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId){
+            R.id.action_refresh -> {
+                requestLocationData()
+                true
+            } else -> super.onOptionsItemSelected(item)
+        }
     }
 
 }
