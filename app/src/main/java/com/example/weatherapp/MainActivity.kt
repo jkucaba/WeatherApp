@@ -15,6 +15,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.example.weatherapp.keys.ConstKey
 import com.example.weatherapp.models.WeatherResponse
 import com.example.weatherapp.network.WeatherService
 import com.google.android.gms.location.*
@@ -130,12 +131,12 @@ class MainActivity : AppCompatActivity() {
                 retrofit.create<WeatherService>(WeatherService::class.java)
 
             val listCall : Call<WeatherResponse> = service.getWeather(
-                latitude, longitude, Constants.METRIC_UNIT, Constants.APP_ID
+                latitude, longitude, Constants.METRIC_UNIT, ConstKey.APP_ID
             )
 
             listCall.enqueue(object : Callback<WeatherResponse>{
-                override fun onResponse(response: Response<WeatherResponse>?, retrofit: Retrofit?) {
-                    if(response!!.isSuccess){
+                override fun onResponse(response: Response<WeatherResponse>, retrofit: Retrofit) {
+                    if(response.isSuccess){
                         val weatherList : WeatherResponse = response.body()
                         Log.i("Response Result", "$weatherList")
                     }else {
@@ -148,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                                 Log.e("Error 404", "Not Found")
                             }
                             else -> {
-                                Log.e("Error", "Generic Error")
+                                Log.e("Error", rc.toString())
                             }
                         }
                     }

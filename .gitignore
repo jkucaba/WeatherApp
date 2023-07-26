@@ -14,3 +14,5 @@
 .cxx
 local.properties
 /app/src/main/res/values/keys.xml
+/app/src/main/java/com/example/weatherapp/keys/ConstKey.kt
+/app/src/main/java/com/example/weatherapp/keys/

@@ -2,7 +2,7 @@ package com.example.weatherapp.models
 
 import java.io.Serializable
 
-data class Main (
+data class Main(
     val temp: Double,
     val pressure: Double,
     val humidity: Int,
@@ -10,4 +10,4 @@ data class Main (
     val temp_max: Double,
     val sea_level: Double,
     val grnd_level: Double
-        ): Serializable
+) : Serializable
